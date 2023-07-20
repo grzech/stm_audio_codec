@@ -1,0 +1,33 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug stm_audio_codec",
+            "request": "launch",
+            "type": "cortex-debug",
+            "cwd": "${workspaceRoot}",
+            "executable": "${workspaceFolder}/target/thumbv7em-none-eabihf/debug/stm_audio_codec",
+            "preLaunchTask": "Build binary",
+            "servertype": "external",
+            // This may need to be gdb-multiarch depending on your system (i.e. Linux vs Mac)
+            "gdbPath": "gdb-multiarch",
+            // Connect to an already running OpenOCD instance
+            "gdbTarget": "localhost:3333",
+            // If you have the Pico SDK installed, allows the
+            // display of the RP2040 CPU registers in VS Code
+            "svdFile": "${workspaceRoot}/STM32F407.svd",
+            "runToMain": true,
+            "preLaunchCommands": [
+                "monitor init",
+                "monitor reset init",
+                "monitor halt",
+            ],
+            // Work around for stopping at main on restart
+            "postRestartCommands": [
+                "break main",
+                "continue",
+                "exit"
+            ],
+        }
+    ]
+}

@@ -1,0 +1,19 @@
+[package]
+name = "stm_audio_codec"
+version = "0.1.0"
+edition = "2021"
+
+[profile.release]
+opt-level = 'z' # turn on maximum optimizations. We only have 1024kB
+lto = true      # Link-time-optimizations for further size reduction
+
+[dependencies]
+cortex-m = "^0.7.7"      # Access to the generic ARM peripherals
+cortex-m-rt = "^0.7.3"  # Startup code for the ARM Core
+embedded-hal = "^0.2.4"  # Access to generic embedded functions (`set_high`)
+panic-halt = "^0.2.0"    # Panic handler
+
+# Access to the stm32f407 HAL.
+[dependencies.stm32f4xx-hal]
+features = ["stm32f407", "rt"]
+version = "^0.17.0"
