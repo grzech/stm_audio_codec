@@ -23,7 +23,7 @@
         },
         {
             "type": "shell",
-            "command": "openocd -f \"board/stm32f4discovery.cfg\" -c \"program ${workspaceFolder}/target/thumbv7em-none-eabihf/release/stm_audio_codec reset exit 0x08000000\"",
+            "command": "openocd -f \"board/stm32f4discovery.cfg\" -c \"program ${workspaceFolder}/target/thumbv7em-none-eabihf/release/stm_audio_codec verify reset exit\"",
             "group": "none",
             "label": "Flash uC",
             "dependsOn": "Build release binary",
