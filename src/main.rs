@@ -12,6 +12,9 @@ use stm32f4xx_hal::{
     i2c::{Mode, I2c},
 };
 
+mod cs43l22;
+use cs43l22::CS43L22;
+
 #[entry]
 fn main() -> ! {
     let dp = pac::Peripherals::take().unwrap();
@@ -36,10 +39,10 @@ fn main() -> ! {
                                                      &clocks)
                                         .unwrap();
     
-    let mut amp_reset = gpiod.pd4.into_push_pull_output();
+    let amp_reset = gpiod.pd4.into_push_pull_output();
     let sda = gpiob.pb9;
     let scl = gpiob.pb6;
-    let mut i2c1 = I2c::new(dp.I2C1, (scl, sda), Mode::standard(100.kHz()), &clocks);
+    let i2c1 = I2c::new(dp.I2C1, (scl, sda), Mode::standard(100.kHz()), &clocks);
 
     blue.set_high();
     red.set_high();
@@ -51,9 +54,10 @@ fn main() -> ! {
     orange.set_low();
     green.set_low();
     
-    amp_reset.set_high();
+    let mut amp = CS43L22::new(amp_reset, i2c1, 0x4A);
+    amp.reset_on_off(false);
     let mut data = [0];
-    if let Ok(_) = i2c1.write_read(0x4A, &[0x01], &mut data) {
+    if amp.read_register(0x01, &mut data) {
         writeln!(&mut usart, "Succesfully read data from I2C1: \"{}\"", data[0]).unwrap();
     } else {
         writeln!(&mut usart, "Couldn't read data from I2C1").unwrap();
