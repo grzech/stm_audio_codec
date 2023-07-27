@@ -9,6 +9,7 @@ use stm32f4xx_hal::{
     pac::{self},
     prelude::*,
     serial::Config,
+    i2c::{Mode, I2c},
 };
 
 #[entry]
@@ -16,6 +17,7 @@ fn main() -> ! {
     let dp = pac::Peripherals::take().unwrap();
     let gpiod = dp.GPIOD.split();
     let gpioa = dp.GPIOA.split();
+    let gpiob = dp.GPIOB.split();
     let clocks = dp.RCC.constrain().cfgr.use_hse(8.MHz()).freeze();
  
     let mut blue = gpiod.pd15.into_push_pull_output();
@@ -34,6 +36,11 @@ fn main() -> ! {
                                                      &clocks)
                                         .unwrap();
     
+    let mut amp_reset = gpiod.pd4.into_push_pull_output();
+    let sda = gpiob.pb9;
+    let scl = gpiob.pb6;
+    let mut i2c1 = I2c::new(dp.I2C1, (scl, sda), Mode::standard(100.kHz()), &clocks);
+
     blue.set_high();
     red.set_high();
     orange.set_high();
@@ -43,8 +50,17 @@ fn main() -> ! {
     red.set_low();
     orange.set_low();
     green.set_low();
+    
+    amp_reset.set_high();
+    let mut data = [0];
+    if let Ok(_) = i2c1.write_read(0x4A, &[0x01], &mut data) {
+        writeln!(&mut usart, "Succesfully read data from I2C1: \"{}\"", data[0]).unwrap();
+    } else {
+        writeln!(&mut usart, "Couldn't read data from I2C1").unwrap();
+    };
+
     writeln!(&mut usart, "Entering mainloop").unwrap();
     loop {        
         blue.toggle();
-    }
+    };
 }
