@@ -22,4 +22,11 @@ impl<P, I> CS43L22<P, I> where P: OutputPin, I: Write + WriteRead {
         };
         false
     }
+
+    pub fn write_register(&mut self, register: u8, value: u8) -> bool {
+        if let Ok(_) = self.i2c.write(self.address, &[register, value]) {
+            return true;
+        };
+        false
+    }
 }
