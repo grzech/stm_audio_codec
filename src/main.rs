@@ -55,14 +55,18 @@ fn main() -> ! {
     green.set_low();
     
     let mut amp = CS43L22::new(amp_reset, i2c1, 0x4A);
-    amp.reset_on_off(false);
+    amp.initialize();
     let mut data = [0];
     if amp.read_register(CS43Regs::ID, &mut data) {
-        writeln!(&mut usart, "Succesfully read data from I2C1: \"{}\"", data[0]).unwrap();
+        writeln!(&mut usart, "Succesfully read data from I2C1: \"{:X}\"", data[0]).unwrap();
     } else {
         writeln!(&mut usart, "Couldn't read data from I2C1").unwrap();
     };
-    
+    if amp.read_register(CS43Regs::PowerCtrl1, &mut data) {
+        writeln!(&mut usart, "Succesfully read data from I2C1: \"{:X}\"", data[0]).unwrap();
+    } else {
+        writeln!(&mut usart, "Couldn't read data from I2C1").unwrap();
+    };
     writeln!(&mut usart, "Entering mainloop").unwrap();
     loop {        
         blue.toggle();
