@@ -13,7 +13,7 @@ use stm32f4xx_hal::{
 };
 
 mod cs43l22;
-use cs43l22::CS43L22;
+use cs43l22::{CS43L22, CS43Regs};
 
 #[entry]
 fn main() -> ! {
@@ -57,12 +57,12 @@ fn main() -> ! {
     let mut amp = CS43L22::new(amp_reset, i2c1, 0x4A);
     amp.reset_on_off(false);
     let mut data = [0];
-    if amp.read_register(0x01, &mut data) {
+    if amp.read_register(CS43Regs::ID, &mut data) {
         writeln!(&mut usart, "Succesfully read data from I2C1: \"{}\"", data[0]).unwrap();
     } else {
         writeln!(&mut usart, "Couldn't read data from I2C1").unwrap();
     };
-
+    
     writeln!(&mut usart, "Entering mainloop").unwrap();
     loop {        
         blue.toggle();
