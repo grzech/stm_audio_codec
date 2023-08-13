@@ -13,7 +13,7 @@ use stm32f4xx_hal::{
 };
 
 mod cs43l22;
-use cs43l22::{CS43L22, CS43Regs};
+use cs43l22::CS43L22;
 
 #[entry]
 fn main() -> ! {
@@ -56,17 +56,22 @@ fn main() -> ! {
     
     let mut amp = CS43L22::new(amp_reset, i2c1, 0x4A);
     amp.initialize();
-    let mut data = [0];
-    if amp.read_register(CS43Regs::ID, &mut data) {
-        writeln!(&mut usart, "Succesfully read data from I2C1: \"{:X}\"", data[0]).unwrap();
-    } else {
-        writeln!(&mut usart, "Couldn't read data from I2C1").unwrap();
-    };
-    if amp.read_register(CS43Regs::PowerCtrl1, &mut data) {
-        writeln!(&mut usart, "Succesfully read data from I2C1: \"{:X}\"", data[0]).unwrap();
-    } else {
-        writeln!(&mut usart, "Couldn't read data from I2C1").unwrap();
-    };
+    
+    let vol = amp.get_volume();
+    writeln!(&mut usart, "Initial volume = {vol}").unwrap();
+    amp.change_volume(10);
+    let vol = amp.get_volume();
+    writeln!(&mut usart, "Volume after +10 = {vol}").unwrap();
+    amp.change_volume(30);
+    let vol = amp.get_volume();
+    writeln!(&mut usart, "Volume after +30 = {vol}").unwrap();
+    amp.change_volume(-20);
+    let vol = amp.get_volume();
+    writeln!(&mut usart, "Volume after -29 = {vol}").unwrap();
+    amp.change_volume(-3);
+    let vol = amp.get_volume();
+    writeln!(&mut usart, "Volume after -3 = {vol}").unwrap();
+
     writeln!(&mut usart, "Entering mainloop").unwrap();
     loop {        
         blue.toggle();

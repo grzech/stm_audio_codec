@@ -6,11 +6,15 @@ pub struct CS43L22<P, I> where P: OutputPin, I: Write + WriteRead {
     i2c: I,
 }
 
-pub enum CS43Regs {
+const HEADPHONE_ON_SPEAKER_OFF: u8 = 0xAF;
+
+enum CS43Regs {
     ID = 0x01,
     PowerCtrl1 = 0x02,
     PowerCtrl2 = 0x03,
     InterfaceControl = 0x06,
+    MasterVolumeA = 20,
+    MasterVolumeB = 21,
     VolumeA = 0x22,
     VolumeB = 0x23,
     InitReg1 = 0x00,
@@ -57,6 +61,24 @@ impl<P, I> CS43L22<P, I> where P: OutputPin, I: Write + WriteRead {
         self.set_reset(false);
         self.init_settings();
         self.write_register(CS43Regs::PowerCtrl1, 0x9E);
+        self.write_register(CS43Regs::PowerCtrl2, HEADPHONE_ON_SPEAKER_OFF);
+        self.write_register(CS43Regs::MasterVolumeA, 0);
+        self.write_register(CS43Regs::MasterVolumeB, 0);
+        self.write_register(CS43Regs::VolumeA, 0);
+        self.write_register(CS43Regs::VolumeB, 0);
+        
+    }
+
+    pub fn get_volume(&mut self) -> u8 {
+        let mut volume = [0u8];
+        self.read_register(CS43Regs::MasterVolumeA, &mut volume);
+        volume[0]
+    }
+
+    pub fn change_volume(&mut self, volume_change: i8) {
+        let volume = (self.get_volume() as i8 + volume_change) as u8;
+        self.write_register(CS43Regs::MasterVolumeA, volume);
+        self.write_register(CS43Regs::MasterVolumeB, volume);
     }
 
     pub fn power_down(&mut self) {
