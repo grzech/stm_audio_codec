@@ -7,9 +7,10 @@ pub struct CS43L22<P, I> where P: OutputPin, I: Write + WriteRead {
 }
 
 const HEADPHONE_ON_SPEAKER_OFF: u8 = 0xAF;
+const I2S_24BIT_DATA_FORMAT: u8 = 0x04;
 
 enum CS43Regs {
-    ID = 0x01,
+    //ID = 0x01,
     PowerCtrl1 = 0x02,
     PowerCtrl2 = 0x03,
     InterfaceControl = 0x06,
@@ -66,6 +67,7 @@ impl<P, I> CS43L22<P, I> where P: OutputPin, I: Write + WriteRead {
         self.write_register(CS43Regs::MasterVolumeB, 0);
         self.write_register(CS43Regs::VolumeA, 0);
         self.write_register(CS43Regs::VolumeB, 0);
+        self.write_register(CS43Regs::InterfaceControl, I2S_24BIT_DATA_FORMAT);
         
     }
 
