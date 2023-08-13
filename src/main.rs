@@ -10,6 +10,8 @@ use stm32f4xx_hal::{
     prelude::*,
     serial::Config,
     i2c::{Mode, I2c},
+    i2s::I2s,
+    spi::Spi3,
 };
 
 mod cs43l22;
@@ -21,6 +23,7 @@ fn main() -> ! {
     let gpiod = dp.GPIOD.split();
     let gpioa = dp.GPIOA.split();
     let gpiob = dp.GPIOB.split();
+    let gpioc = dp.GPIOC.split();
     let clocks = dp.RCC.constrain().cfgr.use_hse(8.MHz()).freeze();
  
     let mut blue = gpiod.pd15.into_push_pull_output();
@@ -43,6 +46,11 @@ fn main() -> ! {
     let sda = gpiob.pb9;
     let scl = gpiob.pb6;
     let i2c1 = I2c::new(dp.I2C1, (scl, sda), Mode::standard(100.kHz()), &clocks);
+    let mck = gpioc.pc7;
+    let ck = gpioc.pc10;
+    let sd = gpioc.pc12;
+    let ws = gpioa.pa4;
+    let i2s3 = I2s::new(dp.SPI3, (ws, ck, mck, sd), &clocks);
 
     blue.set_high();
     red.set_high();
@@ -54,7 +62,7 @@ fn main() -> ! {
     orange.set_low();
     green.set_low();
     
-    let mut amp = CS43L22::new(amp_reset, i2c1, 0x4A);
+    let mut amp = CS43L22::new(amp_reset, i2c1, 0x4A, i2s3);
     amp.initialize();
     
     let vol = amp.get_volume();

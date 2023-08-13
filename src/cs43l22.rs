@@ -1,9 +1,11 @@
 use embedded_hal::{digital::v2::OutputPin, blocking::i2c::{Write, WriteRead}};
+use stm32f4xx_hal::i2s::{I2s, Instance};
 
-pub struct CS43L22<P, I> where P: OutputPin, I: Write + WriteRead {
+pub struct CS43L22<P, I, S> where P: OutputPin, I: Write + WriteRead, S: Instance{
     address: u8,
     reset: P,
     i2c: I,
+    i2s: I2s<S>,
 }
 
 const HEADPHONE_ON_SPEAKER_OFF: u8 = 0xAF;
@@ -23,9 +25,9 @@ enum CS43Regs {
     InitReg3 = 0x32,
 }
 
-impl<P, I> CS43L22<P, I> where P: OutputPin, I: Write + WriteRead {
-    pub fn new(reset: P, i2c: I, address: u8) -> CS43L22<P, I> {
-        CS43L22 {address, reset, i2c}
+impl<P, I, S> CS43L22<P, I, S> where P: OutputPin, I: Write + WriteRead, S: Instance {
+    pub fn new(reset: P, i2c: I, address: u8, i2s: I2s<S>) -> CS43L22<P, I, S> {
+        CS43L22 {address, reset, i2c, i2s}
     }
 
     fn set_reset(&mut self, reset: bool) {
@@ -84,6 +86,7 @@ impl<P, I> CS43L22<P, I> where P: OutputPin, I: Write + WriteRead {
     }
 
     pub fn power_down(&mut self) {
+        self.write_register(CS43Regs::PowerCtrl1, 0x9F);
         self.set_reset(true);
     }
 }
