@@ -35,7 +35,7 @@ impl<P, I, S> CS43L22<P, I, S> where P: OutputPin, I: Write + WriteRead, S: Inst
         else { let _ = self.reset.set_high(); };
     }
 
-    pub fn read_register(&mut self, register: CS43Regs, buffer: &mut [u8]) -> bool {
+    fn read_register(&mut self, register: CS43Regs, buffer: &mut [u8]) -> bool {
         if let Ok(_) = self.i2c.write_read(self.address, &[register as u8], buffer) {
             return true;
         };
@@ -69,8 +69,7 @@ impl<P, I, S> CS43L22<P, I, S> where P: OutputPin, I: Write + WriteRead, S: Inst
         self.write_register(CS43Regs::MasterVolumeB, 0);
         self.write_register(CS43Regs::VolumeA, 0);
         self.write_register(CS43Regs::VolumeB, 0);
-        self.write_register(CS43Regs::InterfaceControl, I2S_24BIT_DATA_FORMAT);
-        
+        self.write_register(CS43Regs::InterfaceControl, I2S_24BIT_DATA_FORMAT);        
     }
 
     pub fn get_volume(&mut self) -> u8 {
