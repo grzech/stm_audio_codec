@@ -10,12 +10,15 @@ use stm32f4xx_hal::{
     prelude::*,
     serial::Config,
     i2c::{Mode, I2c},
-    i2s::I2s,
-    spi::Spi3,
+    pac::RCC,
+    rcc::Clocks,
 };
 
+pub mod i2s;
 mod cs43l22;
 use cs43l22::CS43L22;
+
+const SAMPLE_RATE: u32 = 48_000;
 
 #[entry]
 fn main() -> ! {
@@ -24,8 +27,7 @@ fn main() -> ! {
     let gpioa = dp.GPIOA.split();
     let gpiob = dp.GPIOB.split();
     let gpioc = dp.GPIOC.split();
-    let clocks = dp.RCC.constrain().cfgr.use_hse(8.MHz()).freeze();
- 
+    let clocks = configure_clocks(dp.RCC);
     let mut blue = gpiod.pd15.into_push_pull_output();
     let mut red = gpiod.pd14.into_push_pull_output();
     let mut orange = gpiod.pd13.into_push_pull_output();
@@ -50,7 +52,7 @@ fn main() -> ! {
     let ck = gpioc.pc10;
     let sd = gpioc.pc12;
     let ws = gpioa.pa4;
-    let i2s3 = I2s::new(dp.SPI3, (ws, ck, mck, sd), &clocks);
+    let i2s3 = i2s::I2s::new(dp.SPI3, (ws, ck, mck, sd), &clocks);
 
     blue.set_high();
     red.set_high();
@@ -84,4 +86,11 @@ fn main() -> ! {
     loop {        
         blue.toggle();
     };
+}
+
+fn configure_clocks(clocks: RCC) -> Clocks {
+    clocks.apb1enr.write(|w| w.spi3en().enabled());
+    clocks.cr.write(|w| w.plli2son().on());
+    clocks.ahb1enr.write(|w| w.dma1en().enabled().dma2en().enabled());
+    return clocks.constrain().cfgr.use_hse(8.MHz()).freeze();
 }

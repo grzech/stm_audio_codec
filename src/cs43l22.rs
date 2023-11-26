@@ -1,7 +1,9 @@
-use embedded_hal::{digital::v2::OutputPin, blocking::i2c::{Write, WriteRead}};
-use stm32f4xx_hal::i2s::{I2s, Instance};
+use embedded_hal::{digital::v2::OutputPin, blocking::i2c};
+use stm32f4xx_hal::{spi, i2s};
+use crate::i2s::I2s;
 
-pub struct CS43L22<P, I, S> where P: OutputPin, I: Write + WriteRead, S: Instance{
+pub struct CS43L22<P, I, S>
+where P: OutputPin, I: i2c::Write + i2c::WriteRead, S: spi::Instance + i2s::Instance {
     address: u8,
     reset: P,
     i2c: I,
@@ -25,8 +27,9 @@ enum CS43Regs {
     InitReg3 = 0x32,
 }
 
-impl<P, I, S> CS43L22<P, I, S> where P: OutputPin, I: Write + WriteRead, S: Instance {
-    pub fn new(reset: P, i2c: I, address: u8, i2s: I2s<S>) -> CS43L22<P, I, S> {
+impl<P, I, S> CS43L22<P, I, S>
+where P: OutputPin, I: i2c::Write + i2c::WriteRead, S: spi::Instance + i2s::Instance {
+    pub fn new(reset: P, i2c: I, address: u8, i2s: I2s<S>) -> Self {
         CS43L22 {address, reset, i2c, i2s}
     }
 

@@ -16,4 +16,4 @@ panic-halt = "^0.2.0"    # Panic handler
 # Access to the stm32f407 HAL.
 [dependencies.stm32f4xx-hal]
 features = ["stm32f407", "rt"]
-version = "^0.17.0"
+version = "^0.17.1"
