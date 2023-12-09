@@ -12,13 +12,17 @@ use stm32f4xx_hal::{
     i2c::{Mode, I2c},
     pac::RCC,
     rcc::Clocks,
+    i2s::I2s,
+    dma,
 };
 
-pub mod i2s;
 mod cs43l22;
 use cs43l22::CS43L22;
 
+use stm32_i2s_v12x::driver as i2s;
+
 const SAMPLE_RATE: u32 = 48_000;
+const ARRAY_SIZE: usize = 100;
 
 #[entry]
 fn main() -> ! {
@@ -48,11 +52,31 @@ fn main() -> ! {
     let sda = gpiob.pb9;
     let scl = gpiob.pb6;
     let i2c1 = I2c::new(dp.I2C1, (scl, sda), Mode::standard(100.kHz()), &clocks);
-    let mck = gpioc.pc7;
-    let ck = gpioc.pc10;
-    let sd = gpioc.pc12;
-    let ws = gpioa.pa4;
-    let i2s3 = i2s::I2s::new(dp.SPI3, (ws, ck, mck, sd), &clocks);
+    let i2s_pins = (
+        gpioa.pa4.into_alternate(),
+        gpioc.pc10.into_alternate(),
+        gpioc.pc7.into_alternate(),
+        gpioc.pc12.into_alternate(),
+    );
+    let driver_config = i2s::I2sDriverConfig::new_master()
+        .direction(i2s::Transmit)
+        .standard(i2s::Philips)
+        .data_format(i2s::DataFormat::Data24Channel32)
+        .master_clock(true)
+        .request_frequency(SAMPLE_RATE);
+    let hal_i2s = I2s::new(dp.SPI3, i2s_pins, &clocks);
+    let mut i2s3 = driver_config.i2s_driver(hal_i2s);
+    i2s3.set_tx_dma(true);
+    i2s3.enable();
+    let dma1_streams = dma::StreamsTuple::new(dp.DMA1);
+    let dma_config = dma::config::DmaConfig::default()
+        .memory_increment(true)
+        .transfer_complete_interrupt(true);
+    
+    let buffer = cortex_m::singleton!(: [u16; ARRAY_SIZE] = [0x55AA; ARRAY_SIZE]).unwrap();
+    let mut dma_transfer = dma::Transfer::init_memory_to_peripheral(dma1_streams.5, i2s3, buffer, None, dma_config);
+
+    dma_transfer.start(|i2s| i2s.enable());
 
     blue.set_high();
     red.set_high();
@@ -64,7 +88,7 @@ fn main() -> ! {
     orange.set_low();
     green.set_low();
     
-    let mut amp = CS43L22::new(amp_reset, i2c1, 0x4A, i2s3);
+    let mut amp = CS43L22::new(amp_reset, i2c1, 0x4A);
     amp.initialize();
     
     let vol = amp.get_volume();
