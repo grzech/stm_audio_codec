@@ -88,7 +88,7 @@ fn main() -> ! {
     orange.set_low();
     green.set_low();
     
-    let mut amp = CS43L22::new(amp_reset, i2c1, 0x4A);
+ /*   let mut amp = CS43L22::new(amp_reset, i2c1, 0x4A);
     amp.initialize();
     
     let vol = amp.get_volume();
@@ -105,7 +105,7 @@ fn main() -> ! {
     amp.change_volume(-3);
     let vol = amp.get_volume();
     writeln!(&mut usart, "Volume after -3 = {vol}").unwrap();
-
+*/
     writeln!(&mut usart, "Entering mainloop").unwrap();
     loop {        
         blue.toggle();
@@ -113,8 +113,14 @@ fn main() -> ! {
 }
 
 fn configure_clocks(clocks: RCC) -> Clocks {
-    clocks.apb1enr.write(|w| w.spi3en().enabled());
+    clocks.apb1enr.write(|w| w.spi3en().enabled().usart2en().enabled().i2c1en().enabled());
+    clocks.apb2enr.write(|w| w.spi1en().enabled());
     clocks.cr.write(|w| w.plli2son().on());
-    clocks.ahb1enr.write(|w| w.dma1en().enabled().dma2en().enabled());
-    return clocks.constrain().cfgr.use_hse(8.MHz()).freeze();
+    clocks.ahb1enr.write(|w| w.dma1en().enabled().dma2en().enabled().gpioaen().enabled()
+        .gpioben().enabled().gpioden().enabled());
+    return clocks.constrain().cfgr
+        .use_hse(8.MHz())
+        .sysclk(96.MHz())
+        .i2s_clk(61440.kHz())
+        .freeze();
 }
