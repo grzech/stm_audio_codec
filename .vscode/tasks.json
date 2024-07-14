@@ -1,8 +1,8 @@
 {
     "tasks": [
         {
-            "type": "cargo",
-            "command": "build",
+            "type": "shell",
+            "command": "cargo build",
             "problemMatcher": [
                 "$rustc"
             ],
@@ -10,11 +10,8 @@
             "label": "Build binary"
         },
         {
-            "type": "cargo",
-            "command": "build",
-            "args": [
-                "--release"
-            ],
+            "type": "shell",
+            "command": "cargo build --release",
             "problemMatcher": [
                 "$rustc"
             ],
