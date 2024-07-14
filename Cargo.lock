@@ -63,6 +63,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6548a0ad5d2549e111e1f6a11a6c2e2d00ce6a3dafe22948d67c2b443f775e52"
 
 [[package]]
+name = "cs43l22"
+version = "0.1.0"
+source = "git+https://github.com/iMobs/cs43l22.git#e9a475a7b9d1712880a41e8c84d0e69d70a6173a"
+dependencies = [
+ "embedded-hal 0.2.7",
+]
+
+[[package]]
 name = "embedded-dma"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -277,6 +285,7 @@ version = "0.1.0"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",
+ "cs43l22",
  "embedded-hal 0.2.7",
  "panic-halt",
  "stm32_i2s_v12x",

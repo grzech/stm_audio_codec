@@ -13,6 +13,7 @@ cortex-m-rt = "^0.7.3"  # Startup code for the ARM Core
 embedded-hal = "^0.2.4"  # Access to generic embedded functions (`set_high`)
 panic-halt = "^0.2.0"    # Panic handler
 stm32_i2s_v12x = "0.5.0"
+cs43l22 = { git = "https://github.com/iMobs/cs43l22.git" }
 
 # Access to the stm32f407 HAL.
 [dependencies.stm32f4xx-hal]
