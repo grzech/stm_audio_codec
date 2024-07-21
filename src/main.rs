@@ -13,7 +13,7 @@ use stm32f4xx_hal::{
 
 use cs43l22::{Config, CS43L22};
 
-const SAMPLE_RATE: u32 = 96_000;
+const SAMPLE_RATE: u32 = 44_100;
 
 const SINE_750: [i16; 64] = [
     0, 3211, 6392, 9511, 12539, 15446, 18204, 20787, 23169, 25329, 27244, 28897, 30272, 31356,
@@ -53,8 +53,17 @@ fn main() -> ! {
         .standard(Philips)
         .data_format(Data32Channel32)
         .request_frequency(SAMPLE_RATE);
-    let mut i2s_transfer = I2sTransfer::new(i2s, i2s_config);
+    let mut sound_out = I2sTransfer::new(i2s, i2s_config);
 
+    let pins = (gpiob.pb12, gpiob.pb10, gpioc.pc6, gpioc.pc3);
+    let i2s = i2s::I2s::new(dp.SPI2, pins, &clocks);
+    let i2s_config = I2sTransferConfig::new_master()
+        .receive()
+        .master_clock(false)
+        .standard(Philips)
+        .data_format(Data32Channel32)
+        .request_frequency(SAMPLE_RATE);
+    let mut sound_in = I2sTransfer::new(i2s, i2s_config);
 
     codec.play().unwrap();
 
@@ -68,6 +77,9 @@ fn main() -> ! {
         .take(SAMPLE_RATE as usize);
 
     loop {
-        i2s_transfer.write_iter(sine_750_1sec.clone());
+        sound_out.write_iter(sine_750_1sec.clone());
+        if let Ok((l, _)) = sound_in.read() {
+            (l >> 8) as u8;
+        }
     }
 }
