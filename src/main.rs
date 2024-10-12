@@ -1,14 +1,15 @@
 #![no_std]
 #![no_main]
 
-use core::fmt::Write;
-
 use cortex_m_rt::entry;
 use panic_halt as _;
 use stm32f4xx_hal::{
+    block,
     pac::{self},
     prelude::*,
     i2s::{self, stm32_i2s_v12x::transfer::*},
+    rcc,
+    pac::RCC
 };
 
 use cs43l22::{Config, CS43L22};
@@ -27,17 +28,18 @@ const SINE_750: [i16; 64] = [
 fn main() -> ! {
     let dp = pac::Peripherals::take().unwrap();
 
-    let rcc = dp.RCC.constrain();
-    let clocks = rcc
-        .cfgr
-        .use_hse(8.MHz())
-        .sysclk(168.MHz())
-        .i2s_clk(96.MHz())
-        .freeze();
+    let clocks = configure_clocks(dp.RCC);
+
     let gpioa = dp.GPIOA.split();
     let gpiob = dp.GPIOB.split();
     let gpioc = dp.GPIOC.split();
     let gpiod = dp.GPIOD.split();
+
+    let mut blue = gpiod.pd15.into_push_pull_output();
+    let mut red = gpiod.pd14.into_push_pull_output();
+    let mut orange = gpiod.pd13.into_push_pull_output();
+    let mut green = gpiod.pd12.into_push_pull_output();
+
     let mut audio_reset = gpiod.pd4.into_push_pull_output();
 
     audio_reset.set_high();
@@ -59,12 +61,12 @@ fn main() -> ! {
     let i2s = i2s::I2s::new(dp.SPI2, pins, &clocks);
     let i2s_config = I2sTransferConfig::new_master()
         .receive()
-        .master_clock(false)
+        .master_clock(true)
         .standard(Philips)
         .data_format(Data32Channel32)
         .request_frequency(SAMPLE_RATE);
     let mut sound_in = I2sTransfer::new(i2s, i2s_config);
-
+ 
     codec.play().unwrap();
 
     let sine_750_1sec = SINE_750
@@ -77,9 +79,22 @@ fn main() -> ! {
         .take(SAMPLE_RATE as usize);
 
     loop {
+        green.toggle();
         sound_out.write_iter(sine_750_1sec.clone());
-        if let Ok((l, _)) = sound_in.read() {
-            (l >> 8) as u8;
-        }
+        match block!(sound_in.read()) {
+            Ok((l, r)) => red.toggle(),
+            Err(I2sTransferError::Overrun) => orange.toggle(),
+            _ => blue.toggle(),
+        };
     }
+}
+
+fn configure_clocks(clocks: RCC) -> rcc::Clocks {
+    clocks.apb1enr.write(|w| w.usart2en().enabled().can1en().enabled());
+    clocks.cr.write(|w| w.plli2son().on());
+    clocks.ahb1enr.write(|w| w.gpioaen().enabled().gpioden().enabled());
+    return clocks.constrain().cfgr.use_hse(8.MHz())
+                                  .sysclk(168.MHz())
+                                  .i2s_clk(96.MHz())
+                                  .freeze();
 }
