@@ -4,7 +4,6 @@
 use cortex_m_rt::entry;
 use panic_halt as _;
 use stm32f4xx_hal::{
-    block,
     pac::{self},
     prelude::*,
     i2s::{self, stm32_i2s_v12x::transfer::*},
@@ -15,14 +14,6 @@ use stm32f4xx_hal::{
 use cs43l22::{Config, CS43L22};
 
 const SAMPLE_RATE: u32 = 44_100;
-
-const SINE_750: [i16; 64] = [
-    0, 3211, 6392, 9511, 12539, 15446, 18204, 20787, 23169, 25329, 27244, 28897, 30272, 31356,
-    32137, 32609, 32767, 32609, 32137, 31356, 30272, 28897, 27244, 25329, 23169, 20787, 18204,
-    15446, 12539, 9511, 6392, 3211, 0, -3211, -6392, -9511, -12539, -15446, -18204, -20787, -23169,
-    -25329, -27244, -28897, -30272, -31356, -32137, -32609, -32767, -32609, -32137, -31356, -30272,
-    -28897, -27244, -25329, -23169, -20787, -18204, -15446, -12539, -9511, -6392, -3211,
-];
 
 #[entry]
 fn main() -> ! {
@@ -69,22 +60,15 @@ fn main() -> ! {
  
     codec.play().unwrap();
 
-    let sine_750_1sec = SINE_750
-        .iter()
-        .map(|&x| {
-            let x = (x as i32) << 16;
-            (x, x)
-        })
-        .cycle()
-        .take(SAMPLE_RATE as usize);
-
     loop {
         green.toggle();
-        sound_out.write_iter(sine_750_1sec.clone());
-        match block!(sound_in.read()) {
-            Ok((l, r)) => red.toggle(),
-            Err(I2sTransferError::Overrun) => orange.toggle(),
-            _ => blue.toggle(),
+        match sound_in.read::<(i32, i32)>() {
+            Ok(_) => red.toggle(),
+            Err(_) => orange.toggle(),
+        };
+        match sound_out.write((0xAAAA, 0x5555)) {
+            Ok(_) => blue.toggle(),
+            Err(_) => red.toggle(),
         };
     }
 }
