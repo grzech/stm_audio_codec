@@ -11,7 +11,7 @@
             "servertype": "openocd",
             "svdFile": "${workspaceRoot}/STM32F407.svd",
             "runToEntryPoint": "main",
-            "device": "STM32F411CE",
+            "device": "STM32F407VGT",
             "configFiles": [
                 "/board/stm32f4discovery.cfg"
             ],
