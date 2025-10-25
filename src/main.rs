@@ -43,12 +43,20 @@ async fn main(spawner: Spawner) {
         divq: None,
         divr: None,
     };
+    let i2s_pll = rcc::Pll {
+        prediv: rcc::PllPreDiv::DIV8,
+        mul: rcc::PllMul::MUL258,
+        divp: None,
+        divq: None,
+        divr: Some(rcc::PllRDiv::DIV3),
+    };
     let mut config = rcc::Config::default();
     config.hsi = false;
     config.hse = Some(rcc::Hse{freq: Hertz(8_000), mode: rcc::HseMode::Oscillator });
     config.sys = rcc::Sysclk::HSE;
     config.pll_src = rcc::PllSource::HSE;
     config.pll = Some(pll); 
+    config.plli2s = Some(i2s_pll);
 
     let mut can_bus = can::Can::new(p.CAN1, p.PD0, p.PD1, CanIrqs);
     spawner.spawn(led_task(p.PD15.degrade())).unwrap();
