@@ -3,11 +3,12 @@
 
 mod can_task;
 
-use core::sync::atomic::Ordering;
+use core::{sync::atomic::Ordering};
 use embassy_executor::Spawner;
 use embassy_stm32::{
     can,
     gpio::{AnyPin, Level, Output, Pin, Speed},
+    rcc, time::Hertz,
 };
 use embassy_time::{Duration, Timer};
 use panic_halt as _;
@@ -21,17 +22,36 @@ async fn led_task(led: AnyPin) {
     let mut led = Output::new(led, Level::Low, Speed::Low);
 
     loop {
-        Timer::after(Duration::from_millis(500)).await;
-        led.toggle();
+        Timer::after(Duration::from_millis(700)).await;
+        led.set_high();
+        Timer::after(Duration::from_millis(100)).await;
+        led.set_low();
+        Timer::after(Duration::from_millis(100)).await;
+        led.set_high();
+        Timer::after(Duration::from_millis(100)).await;
+        led.set_low();
     }
 }
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let p = embassy_stm32::init(Default::default());
-    let mut can_bus = can::Can::new(p.CAN1, p.PD0, p.PD1, CanIrqs);
+    let pll = rcc::Pll {
+        prediv: rcc::PllPreDiv::DIV8,
+        mul: rcc::PllMul::MUL336,
+        divp: Some(rcc::PllPDiv::DIV2),
+        divq: None,
+        divr: None,
+    };
+    let mut config = rcc::Config::default();
+    config.hsi = false;
+    config.hse = Some(rcc::Hse{freq: Hertz(8_000), mode: rcc::HseMode::Oscillator });
+    config.sys = rcc::Sysclk::HSE;
+    config.pll_src = rcc::PllSource::HSE;
+    config.pll = Some(pll); 
 
-    spawner.spawn(led_task(p.PD13.degrade())).unwrap();
+    let mut can_bus = can::Can::new(p.CAN1, p.PD0, p.PD1, CanIrqs);
+    spawner.spawn(led_task(p.PD15.degrade())).unwrap();
     can_bus.set_bitrate(500_000);
     can_bus.enable().await;
     spawner.spawn(can_task(can_bus)).unwrap();
