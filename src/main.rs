@@ -2,20 +2,62 @@
 #![no_main]
 
 mod can_task;
-
+use cortex_m::prelude::_embedded_hal_blocking_delay_DelayMs;
+use embedded_hal::{self, digital::v2::PinState};
 use core::{sync::atomic::Ordering};
 use embassy_executor::Spawner;
 use embassy_stm32::{
-    can,
-    gpio::{AnyPin, Level, Output, Pin, Speed},
-    rcc, time::Hertz,
+    can, gpio::{AnyPin, Level, Output, Pin, Speed}, mode::Blocking, rcc, spi, time::Hertz
 };
-use embassy_time::{Duration, Timer};
+use embassy_time::{Duration, Timer, Delay};
 use panic_halt as _;
 use defmt_rtt as _;
 
 use can_task::{can_task, STATUS1, STATUS2};
 use can_task::Irqs as CanIrqs;
+use ili9163_driver::{Ili9163, RGB};
+
+struct StmDelay(Delay);
+
+struct StmSpi (spi::Spi<'static, Blocking>, Output<'static>);
+
+struct StmGpio (Output<'static>);
+
+impl embedded_hal::blocking::delay::DelayUs<u32> for StmDelay {
+    fn delay_us(&mut self, us: u32) {
+        self.0.delay_us(us);
+    }
+}
+
+impl embedded_hal::digital::v2::OutputPin for StmGpio {
+    type Error = u8;
+
+    fn set_low(&mut self) -> Result<(), Self::Error> {
+        Ok(self.0.set_low())
+    }
+    
+    fn set_high(&mut self) -> Result<(), Self::Error> {
+        Ok(self.0.set_high())
+    }
+
+    fn set_state(&mut self, state: PinState) -> Result<(), Self::Error> {
+        if state == PinState::High {
+            self.set_high()
+        } else {
+            self.set_low()
+        }
+    }
+}
+
+impl embedded_hal::blocking::spi::Write<u8> for StmSpi {
+    type Error = u8;
+    fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
+        self.1.set_low();
+        self.0.write(words).unwrap();
+        self.1.set_high();
+        Ok(())
+    }
+}
 
 #[embassy_executor::task]
 async fn led_task(led: AnyPin) {
@@ -58,6 +100,28 @@ async fn main(spawner: Spawner) {
     config.pll = Some(pll); 
     config.plli2s = Some(i2s_pll);
 
+    let lcd_comm: spi::Spi<'static, Blocking> = spi::Spi::new_blocking(
+        p.SPI1,
+        p.PB3,
+        p.PB5,
+        p.PA6,
+        spi::Config::default());
+    let ili= Ili9163::<StmSpi, StmGpio, StmDelay, ()>::new(
+        StmSpi(lcd_comm, Output::new(p.PB6, Level::High, Speed::VeryHigh)),
+        StmGpio(Output::new(p.PB4, Level::Low, Speed::VeryHigh)),
+        StmDelay(Delay{}),
+        StmGpio(Output::new(p.PB7, Level::Low, Speed::VeryHigh)),
+        StmGpio(Output::new(p.PB8, Level::Low, Speed::VeryHigh)),
+    ).initialize_for_16bit_pixel();
+
+    if let Ok(mut ili) = ili {
+        let _ = ili.turn_backlight(true);
+        let _ = ili.print_text("Hello World", (10, 10), (RGB(0xFF, 0x00, 0xFF), RGB(0, 0, 0)));
+        let _ = ili.print_text("From Embassy", (10, 20), (RGB(0xFF, 0x00, 0xAA), RGB(0xBB, 0xAA, 0xFF)));
+        let _ = ili.print_text("on STM32F407VG", (10, 30), (RGB(0xAA, 0x00, 0xFF), RGB(0xFF, 0xAA, 0xBB)));
+        Timer::after(Duration::from_millis(10_000)).await;
+    };
+    
     let mut can_bus = can::Can::new(p.CAN1, p.PD0, p.PD1, CanIrqs);
     spawner.spawn(led_task(p.PD15.degrade())).unwrap();
     can_bus.set_bitrate(500_000);

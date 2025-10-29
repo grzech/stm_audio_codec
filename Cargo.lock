@@ -621,6 +621,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 
 [[package]]
+name = "ili9163_driver"
+version = "1.0.0"
+dependencies = [
+ "embedded-hal 0.2.7",
+]
+
+[[package]]
 name = "litrs"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -873,13 +880,14 @@ dependencies = [
  "embassy-stm32",
  "embassy-sync 0.7.0",
  "embassy-time",
- "embedded-hal 1.0.0",
+ "embedded-hal 0.2.7",
  "embedded-hal-bus",
  "embedded-io",
  "embedded-io-async",
  "embedded-storage",
  "futures-util",
  "heapless",
+ "ili9163_driver",
  "micromath",
  "nb 1.1.0",
  "panic-halt",
