@@ -2,6 +2,9 @@
 #![no_main]
 
 mod can_task;
+mod LCD_task;
+
+use LCD_task::lcd_task;
 use cortex_m::prelude::_embedded_hal_blocking_delay_DelayMs;
 use embedded_hal::{self, digital::v2::PinState};
 use core::{sync::atomic::Ordering};
@@ -82,21 +85,14 @@ async fn main(spawner: Spawner) {
         Delay{},
         Output::new(p.PB7, Level::Low, Speed::VeryHigh),
         Output::new(p.PB8, Level::Low, Speed::VeryHigh),
-    ).initialize_for_16bit_pixel();
-
-    if let Ok(mut ili) = ili {
-        let _ = ili.turn_backlight(true);
-        let _ = ili.print_text("Hello World", (10, 10), (RGB(0xFF, 0x00, 0xFF), RGB(0, 0, 0)));
-        let _ = ili.print_text("From Embassy", (10, 20), (RGB(0xFF, 0x00, 0xAA), RGB(0xBB, 0xAA, 0xFF)));
-        let _ = ili.print_text("on STM32F407VG", (10, 30), (RGB(0xAA, 0x00, 0xFF), RGB(0xFF, 0xAA, 0xBB)));
-        Timer::after(Duration::from_millis(10_000)).await;
-    };
+    ).initialize_for_16bit_pixel().ok();
     
-    let mut can_bus = can::Can::new(p.CAN1, p.PD0, p.PD1, CanIrqs);
+    //let mut can_bus = can::Can::new(p.CAN1, p.PD0, p.PD1, CanIrqs);
     spawner.spawn(led_task(p.PD15.degrade())).unwrap();
-    can_bus.set_bitrate(500_000);
-    can_bus.enable().await;
-    spawner.spawn(can_task(can_bus)).unwrap();
+    //can_bus.set_bitrate(500_000);
+    //can_bus.enable().await;
+    //spawner.spawn(can_task(can_bus)).unwrap();
+    spawner.spawn(lcd_task(ili)).unwrap();
     STATUS1.store(0, Ordering::Relaxed);
     STATUS2.store(0xFFFFFFFF, Ordering::Relaxed);
     loop {
