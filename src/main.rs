@@ -17,37 +17,7 @@ use can_task::{can_task, STATUS1, STATUS2};
 use can_task::Irqs as CanIrqs;
 use ili9163_driver::{Ili9163, RGB};
 
-struct StmDelay(Delay);
-
 struct StmSpi (spi::Spi<'static, Blocking>, Output<'static>);
-
-struct StmGpio (Output<'static>);
-
-impl embedded_hal::blocking::delay::DelayUs<u32> for StmDelay {
-    fn delay_us(&mut self, us: u32) {
-        self.0.delay_us(us);
-    }
-}
-
-impl embedded_hal::digital::v2::OutputPin for StmGpio {
-    type Error = u8;
-
-    fn set_low(&mut self) -> Result<(), Self::Error> {
-        Ok(self.0.set_low())
-    }
-    
-    fn set_high(&mut self) -> Result<(), Self::Error> {
-        Ok(self.0.set_high())
-    }
-
-    fn set_state(&mut self, state: PinState) -> Result<(), Self::Error> {
-        if state == PinState::High {
-            self.set_high()
-        } else {
-            self.set_low()
-        }
-    }
-}
 
 impl embedded_hal::blocking::spi::Write<u8> for StmSpi {
     type Error = u8;
@@ -106,12 +76,12 @@ async fn main(spawner: Spawner) {
         p.PB5,
         p.PA6,
         spi::Config::default());
-    let ili= Ili9163::<StmSpi, StmGpio, StmDelay, ()>::new(
+    let ili= Ili9163::<StmSpi, Output<'_>, Delay, ()>::new(
         StmSpi(lcd_comm, Output::new(p.PB6, Level::High, Speed::VeryHigh)),
-        StmGpio(Output::new(p.PB4, Level::Low, Speed::VeryHigh)),
-        StmDelay(Delay{}),
-        StmGpio(Output::new(p.PB7, Level::Low, Speed::VeryHigh)),
-        StmGpio(Output::new(p.PB8, Level::Low, Speed::VeryHigh)),
+        Output::new(p.PB4, Level::Low, Speed::VeryHigh),
+        Delay{},
+        Output::new(p.PB7, Level::Low, Speed::VeryHigh),
+        Output::new(p.PB8, Level::Low, Speed::VeryHigh),
     ).initialize_for_16bit_pixel();
 
     if let Ok(mut ili) = ili {
