@@ -2,15 +2,14 @@
 #![no_main]
 
 mod can_task;
-mod LCD_task;
+mod lcd_task;
 
-use LCD_task::lcd_task;
-use cortex_m::prelude::_embedded_hal_blocking_delay_DelayMs;
-use embedded_hal::{self, digital::v2::PinState};
-use core::{sync::atomic::Ordering};
+use lcd_task::lcd_task;
+use embedded_hal;
+use core::sync::atomic::{AtomicU32, Ordering};
 use embassy_executor::Spawner;
 use embassy_stm32::{
-    can, gpio::{AnyPin, Level, Output, Pin, Speed}, mode::Blocking, rcc, spi, time::Hertz
+    can::{self, filter, Fifo}, gpio::{AnyPin, Level, Output, Pin, Speed}, mode::Blocking, rcc, spi, time::Hertz
 };
 use embassy_time::{Duration, Timer, Delay};
 use panic_halt as _;
@@ -18,7 +17,8 @@ use defmt_rtt as _;
 
 use can_task::{can_task, STATUS1, STATUS2};
 use can_task::Irqs as CanIrqs;
-use ili9163_driver::{Ili9163, RGB};
+use ili9163_driver::Ili9163;
+use lcd_task::LCD_DATA;
 
 struct StmSpi (spi::Spi<'static, Blocking>, Output<'static>);
 
@@ -87,11 +87,12 @@ async fn main(spawner: Spawner) {
         Output::new(p.PB8, Level::Low, Speed::VeryHigh),
     ).initialize_for_16bit_pixel().ok();
     
-    //let mut can_bus = can::Can::new(p.CAN1, p.PD0, p.PD1, CanIrqs);
+    let mut can_bus = can::Can::new(p.CAN1, p.PD0, p.PD1, CanIrqs);
+    can_bus.modify_filters().enable_bank(0, Fifo::Fifo0, filter::Mask32::accept_all());
     spawner.spawn(led_task(p.PD15.degrade())).unwrap();
-    //can_bus.set_bitrate(500_000);
-    //can_bus.enable().await;
-    //spawner.spawn(can_task(can_bus)).unwrap();
+    can_bus.set_bitrate(500_000);
+    can_bus.enable().await;
+    spawner.spawn(can_task(can_bus)).unwrap();
     spawner.spawn(lcd_task(ili)).unwrap();
     STATUS1.store(0, Ordering::Relaxed);
     STATUS2.store(0xFFFFFFFF, Ordering::Relaxed);
@@ -99,5 +100,16 @@ async fn main(spawner: Spawner) {
         Timer::after(Duration::from_millis(1000)).await;
         STATUS1.fetch_add(1, Ordering::Relaxed);
         STATUS2.fetch_sub(1, Ordering::Relaxed);
+    }
+}
+
+trait IntoBytes {
+    fn to_bytes(&self) -> [u8; 4];
+}
+
+impl IntoBytes for AtomicU32 {
+    fn to_bytes(&self) -> [u8; 4] {
+        let val = self.load(Ordering::Relaxed);
+        [((val >> 24) & 0xFF) as u8, ((val >> 16) & 0xFF) as u8, ((val >> 8) & 0xFF) as u8, (val & 0xFF) as u8]
     }
 }
