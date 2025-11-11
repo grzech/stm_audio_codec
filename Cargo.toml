@@ -36,4 +36,4 @@ panic-halt = "1.0.0"
 
 stm32_i2s_v12x = "0.5.1"
 cs43l22 = { git = "https://github.com/iMobs/cs43l22.git" }
-ili9163_driver = {path="../ili9163_driver/"}
+ili9163_driver = {path="../ili9163_driver/", default-features = false}
